@@ -39,9 +39,9 @@ async def join_channels():
             print(has_joined.group())
         await asyncio.sleep(0.5)
 
-# Function to replace non Twitch links with "[link deleted]"
+# Replace non Twitch links with "[link deleted]"
 def filter_links(message):
-    
+
     pattern = r"(https?://(?:[a-zA-Z0-9]|[.\-~!$&'()*+;=:@/?])+(?:(?:[/?_#][^ \n\r\t\f\"'<>()\[\]]+)?))"
 
     def replace_links(input):
@@ -55,53 +55,66 @@ def filter_links(message):
     # Replace links using regular expressions
     return re.sub(pattern, replace_links, message)
 
+# Send message to the Discord channel
+async def send_to_discord(message):
+    try:
+        discord_channel = discord.utils.get(
+            bot.get_all_channels(), name=DISCORD_CHANNEL)
+        if discord_channel:
+            await discord_channel.send(message, silent=True)
+        else:
+            print(f"Channel {DISCORD_CHANNEL} not found.")
+    except AttributeError:
+        print(f"Channel {DISCORD_CHANNEL} not found.")
+
+# Respond PONG after receiving PING
+def ping_pong(resp):
+    if resp.startswith('PING'):
+        irc_socket.send(("PONG " + resp.split()[1] + "\r\n").encode())
+        print("PING PONG")
+
+# Parse messages
+def parse_messages(data):
+    for resp in data:
+
+        ping_pong(resp)
+
+        if SEARCH_PHRASE in resp.lower():
+            # Parse response to message
+            match = re.search(':(.*)\!.*@.*\.tmi\.twitch\.tv PRIVMSG #(.*) :(.*)', resp)
+            if match is None:
+                return
+            else:
+                username, channel, message = match.groups()
+                parsed_message = channel + " | " + "**" + username + "**" + ": " + message
+                if re.search(r"\b" + SEARCH_PHRASE + r"\b", message, re.IGNORECASE):
+                    print("Phrase has been mentioned")
+                    parsed_message = filter_links(parsed_message)
+                    return parsed_message
+
+# Monitoring
+async def monitoring():
+    while True:
+
+        # Receive messages
+        data = await asyncio.to_thread(irc_socket.recv, 2048)
+        data = data.decode('utf-8', errors='ignore').splitlines()
+
+        # Parse, check for phrase and send to Discord
+        send_to_discord(parse_messages(data))
 
 # Establish bot
 intents = discord.Intents.default()
 intents.message_content = True
 bot = discord.Client(intents=intents)
 
-# messaging
-async def send_messages():
-    while True:
-        
-        #Receive messages
-        data = await asyncio.to_thread(irc_socket.recv, 2048)
-        data = data.decode('utf-8', errors='ignore').splitlines()
-
-        for resp in data:
-            # Respond PONG after receiving PING
-            if resp.startswith('PING'):
-                irc_socket.send(("PONG " + resp.split()[1] + "\r\n").encode())
-                print("PING PONG")
-
-            if SEARCH_PHRASE in resp.lower():
-                # Parse response to message
-                match = re.search(':(.*)\!.*@.*\.tmi\.twitch\.tv PRIVMSG #(.*) :(.*)', resp)
-                if match is None:
-                    return
-                else:
-                    username, channel, message = match.groups()
-                    parsed_message = channel + " | " + "**" + username + "**" + ": " + message
-                    if re.search(r"\b" + SEARCH_PHRASE + r"\b", message, re.IGNORECASE):
-                        print("Phrase has been mentioned")
-                        parsed_message = filter_links(parsed_message)
-                        # Send the message to the Discord channel
-                        try:
-                            discord_channel = discord.utils.get(bot.get_all_channels(), name=DISCORD_CHANNEL)
-                            if discord_channel:
-                                await discord_channel.send(parsed_message, silent=True)
-                            else:
-                                print(f"Channel {DISCORD_CHANNEL} not found.")
-                        except AttributeError:
-                            print(f"Channel {DISCORD_CHANNEL} not found.")
-
+# Main Bot actions
 @bot.event
 async def on_ready():
 
-        print(f'{bot.user} has connected to Discord!')
-        await join_channels()
-        print("MONITORING STARTED")
-        await send_messages()
+    print(f'{bot.user} has connected to Discord!')
+    await join_channels()
+    print("MONITORING STARTING")
+    await monitoring()
 
 bot.run(DISCORD_TOKEN)
