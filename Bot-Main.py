@@ -101,7 +101,9 @@ async def monitoring():
         data = data.decode('utf-8', errors='ignore').splitlines()
 
         # Parse, check for phrase and send to Discord
-        send_to_discord(parse_messages(data))
+        parsed_message = parse_messages(data)
+        if parsed_message:
+            await send_to_discord(parsed_message)
 
 # Establish bot
 intents = discord.Intents.default()
