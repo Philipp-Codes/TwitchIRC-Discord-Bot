@@ -42,7 +42,7 @@ async def join_channels():
 # Replace non Twitch links with "[link deleted]"
 def filter_links(message):
 
-    pattern = r"(https?://(?:[a-zA-Z0-9]|[.\-~!$&'()*+;=:@/?])+(?:(?:[/?_#][^ \n\r\t\f\"'<>()\[\]]+)?))"
+    pattern = r"https?://[\w.\-~!$&\'()*+;=:@/?]+(?:[/\?_#][^ \n\r\t\f\"\'<>()[\]]*)?"
 
     def replace_links(input):
         url = input.group(0)
