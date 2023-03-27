@@ -67,6 +67,18 @@ async def send_to_discord(message):
     except AttributeError:
         print(f"Channel {DISCORD_CHANNEL} not found.")
 
+# Escapes Discord markdown characters
+def escape_markdown(text: str) -> str:
+
+    # List of Discord markdown characters to escape
+    markdown_chars = ["\\", "`", "*", "_", "~", ">", "||"]
+
+    # Escape each markdown character with a backslash
+    for char in markdown_chars:
+        text = text.replace(char, "\\" + char)
+
+    return text
+
 # Respond PONG after receiving PING
 def ping_pong(resp):
     if resp.startswith('PING'):
@@ -86,7 +98,7 @@ def parse_messages(data):
                 return
             else:
                 username, channel, message = match.groups()
-                parsed_message = channel + " | " + "**" + username + "**" + ": " + message
+                parsed_message = escape_markdown(channel) + " | " + "**" + escape_markdown(username) + "**" + ": " + escape_markdown(message)
                 if re.search(r"\b" + SEARCH_PHRASE + r"\b", message, re.IGNORECASE):
                     print("Phrase has been mentioned")
                     parsed_message = filter_links(parsed_message)
@@ -96,7 +108,7 @@ def parse_messages(data):
 async def monitoring():
     while True:
 
-        # Receive messages
+        # Receive Twitch IRC messages
         data = await asyncio.to_thread(irc_socket.recv, 2048)
         data = data.decode('utf-8', errors='ignore').splitlines()
 
