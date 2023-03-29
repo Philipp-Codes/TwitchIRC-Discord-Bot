@@ -32,7 +32,7 @@ irc_socket.send(f"NICK {TWITCH_USERNAME}\n".encode('utf-8'))
 # Join Twitch channels to monitor
 async def join_channels():
     for channel in TWITCH_CHANNELS:
-        irc_socket.send(f"JOIN #{channel}\n".encode('utf-8'))
+        irc_socket.send(f"JOIN #{channel.lower()}\n".encode('utf-8'))
         init_resp = irc_socket.recv(2048).decode('utf-8', errors='ignore')
         has_joined = re.search(r'JOIN #\w+', init_resp)
         if has_joined:
@@ -42,6 +42,7 @@ async def join_channels():
 # Replace non Twitch links with "[link deleted]"
 def filter_links(message):
 
+    # Only http:// or https:// links are relevant for Discord
     pattern = r"https?://[\w.\-~!$&\'()*+;=:@/?]+(?:[/\?_#][^ \n\r\t\f\"\'<>()[\]]*)?"
 
     def replace_links(input):
@@ -89,9 +90,10 @@ def ping_pong(resp):
 def parse_messages(data):
     for resp in data:
 
+        # Send PONGs
         ping_pong(resp)
 
-        if SEARCH_PHRASE in resp.lower():
+        if SEARCH_PHRASE in resp.lower(): # This if clause is for reducing workload
             # Parse response to message
             match = re.search(':(.*)\!.*@.*\.tmi\.twitch\.tv PRIVMSG #(.*) :(.*)', resp)
             if match is None:
