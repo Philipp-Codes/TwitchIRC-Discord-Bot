@@ -36,3 +36,7 @@ https://discord.com/developers/applications
 
 6. Run the bot.
 
+
+
+
+Twitch is a trademark or registered trademark of Twitch Interactive, Inc. in the U.S. and/or other countries. "TwitchIRC-Discord-Bot" is not operated by, sponsored by, or affiliated with Twitch Interactive, Inc. in any way.
